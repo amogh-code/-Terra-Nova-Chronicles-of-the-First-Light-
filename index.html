@@ -122,7 +122,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div class="md:col-span-1 card p-6">
                         <h2 class="font-orbitron text-2xl text-cyan-300 mb-4">MISSION LOG</h2>
-                        <div id="mission-list" class="space-y-3"></div>
+                        <div id="mission-list" class="space-y-3 max-h-[70vh] overflow-y-auto pr-2"></div>
                     </div>
                     <div id="mission-details-panel" class="md:col-span-2 card p-8 opacity-0 transition-opacity duration-500">
                         <div id="mission-placeholder" class="text-center text-slate-500 flex flex-col items-center justify-center h-full">
@@ -181,36 +181,121 @@
             factors: { ELECTRICITY: 0.82, PETROL: 2.31, DIESEL: 2.68, ELECTRIC_CAR: 0.05, WASTE: 0.59, AVG_FUEL_EFFICIENCY: 12 },
         };
         let app, auth, db, audioCtx, simplex;
+        let planetManager;
 
         // --- GAME DATABASES (ITEMS, BLUEPRINTS, QUESTS) ---
         const ITEMS_DB = {
-            'scrap_metal': { name: 'Scrap Metal', emoji: '🔩', description: 'Basic building material.' },
-            'crystal_shard': { name: 'Crystal Shard', emoji: '💎', description: 'A fragment of pure energy.'},
-            'hydro_cell': { name: 'Hydro-Cell', emoji: '💧', description: 'Contains purified water.'},
-            'bio_sample': { name: 'Bio-Sample', emoji: '🌿', description: 'Organic matter, key to life.'},
+            'scrap_metal': { name: 'Scrap Metal', emoji: '🔩', description: 'Basic building material, salvaged from the old world.' },
+            'crystal_shard': { name: 'Crystal Shard', emoji: '💎', description: 'A fragment of pure energy, humming with potential.'},
+            'hydro_cell': { name: 'Hydro-Cell', emoji: '💧', description: 'Contains purified water, the essence of life.'},
+            'bio_sample': { name: 'Bio-Sample', emoji: '🌿', description: 'Organic matter, the key to reviving flora.'},
+            'solar_wafer': { name: 'Solar Wafer', emoji: '☀️', description: 'A thin slice of photo-reactive material.'},
+            'kinetic_motor': { name: 'Kinetic Motor', emoji: '⚙️', description: 'Stores and converts energy from motion.'},
+            'purified_polymer': { name: 'Purified Polymer', emoji: '♻️', description: 'Reconstituted matter, clean and versatile.'},
+            'living_seed': { name: 'Living Seed', emoji: '🌱', description: 'A dormant seed holding ancient genetic code.'}
         };
+
         const BLUEPRINTS_DB = {
             'hydro_purifier': { name: 'Hydro Purifier', emoji: '🚰', materials: { 'scrap_metal': 5, 'crystal_shard': 2 }, result: 'hydro_cell', resultQty: 1, description: "Creates pure water cells from basic materials." },
-            'bio_cultivator': { name: 'Bio-Cultivator', emoji: '🌱', materials: { 'hydro_cell': 2, 'scrap_metal': 3 }, result: 'bio_sample', resultQty: 1, description: "Generates simple organic matter." }
+            'bio_cultivator': { name: 'Bio-Cultivator', emoji: '🌱', materials: { 'hydro_cell': 2, 'scrap_metal': 3 }, result: 'bio_sample', resultQty: 1, description: "Generates simple organic matter." },
+            'solar_panel': { name: 'Mini Solar Panel', emoji: '☀️', materials: { 'solar_wafer': 3, 'scrap_metal': 5 }, result: 'aether_shards', resultQty: 50, description: "Passively generates a small amount of Aether Shards."},
         };
+
         const QUESTS_DB = {
-            'q001': {
-                name: "The First Spark",
+            // == Chain 1: The Awakening (Energy) ==
+            'q_energy_1': {
+                name: "The First Spark", chain: "Energy",
                 description: "LUX detects a faint energy signature. Channel your first Life Force by reporting your energy consumption. This is the first step to awakening Terra-Nova.",
                 objectives: [{ type: 'input', label: 'Monthly Energy Consumption (kWh)', key: 'electricity' }],
                 rewards: { lifeForce: (inputs) => Math.max(100, 2000 - (inputs.electricity * 12 * config.factors.ELECTRICITY) / 2), aetherShards: 5, items: { 'scrap_metal': 3, 'crystal_shard': 1 }},
-                nextQuest: 'q002'
+                nextQuest: 'q_energy_2'
             },
-            'q002': {
-                name: "Echoes of Motion",
-                description: "The planet stirs. Your movement across your own world resonates here. Report your travel to gather more resources.",
+            'q_energy_2': {
+                name: "Phantom Menace", chain: "Energy",
+                description: "Energy readings are unstable. LUX suspects 'phantom loads' from devices on standby. Spend a day ensuring all unused electronics are fully unplugged.",
+                objectives: [{ type: 'pledge', label: "I pledge to unplug phantom loads today." }],
+                rewards: { lifeForce: () => 500, aetherShards: 10, items: { 'solar_wafer': 1 }},
+                nextQuest: 'q_energy_3'
+            },
+             'q_energy_3': {
+                name: "Let There Be Light", chain: "Energy",
+                description: "The old world used inefficient lighting. Scan your living space and confirm you use energy-efficient LED bulbs. Each one is a small star for Terra-Nova.",
+                objectives: [{ type: 'input', label: "How many non-LED bulbs did you replace?", key: 'bulbs_replaced' }],
+                rewards: { lifeForce: (inputs) => 250 * inputs.bulbs_replaced, aetherShards: 5 * inputs.bulbs_replaced, items: { 'solar_wafer': 2 }},
+                nextQuest: 'q_transport_1' // Link to next chain
+            },
+
+            // == Chain 2: The Nomad's Path (Transportation) ==
+            'q_transport_1': {
+                name: "Echoes of Motion", chain: "Transport",
+                description: "The planet stirs. Your movement across your own world resonates here. Report your travel to gather more resources for the journey ahead.",
                 objectives: [
                     { type: 'input', label: 'Weekly Travel Distance (km)', key: 'transport' },
                     { type: 'select', label: 'Vehicle Type', key: 'fuel', options: { 'petrol': 'Fossil-Fueled', 'diesel': 'Diesel-Powered', 'electric': 'Electric Drive' } }
                 ],
                 rewards: { lifeForce: (inputs) => Math.max(100, 3000 - (inputs.transport * 52 * config.factors.PETROL) / 2), aetherShards: 5, items: { 'scrap_metal': 5 }},
-                nextQuest: 'q001'
-            }
+                nextQuest: 'q_transport_2'
+            },
+            'q_transport_2': {
+                name: "The Road Less Traveled", chain: "Transport",
+                description: "Individual transport units are inefficient. Utilize a mass transit system (bus, train, metro) for a day to harmonize your travel energy.",
+                objectives: [{ type: 'pledge', label: "I pledge to use public transport today." }],
+                rewards: { lifeForce: () => 750, aetherShards: 15, items: { 'kinetic_motor': 1 }},
+                nextQuest: 'q_transport_3'
+            },
+            'q_transport_3': {
+                name: "Kinetic Harvest", chain: "Transport",
+                description: "LUX requires kinetic data. Choose a human-powered mode of transport (walk, cycle) for a short journey you would normally drive.",
+                objectives: [{ type: 'input', label: "Distance traveled by foot/bike (km)", key: 'km_powered' }],
+                rewards: { lifeForce: (inputs) => 500 * inputs.km_powered, aetherShards: 10 * inputs.km_powered, items: { 'kinetic_motor': 1, 'scrap_metal': 2 }},
+                nextQuest: 'q_waste_1' // Link to next chain
+            },
+            
+            // == Chain 3: The Warden's Duty (Waste) ==
+            'q_waste_1': {
+                name: "A World of Waste", chain: "Waste",
+                description: "The old world was buried in its own refuse. We must be different. Conduct an audit of your non-organic waste for one week.",
+                objectives: [{ type: 'input', label: "Weekly non-organic waste (kg)", key: 'waste' }],
+                rewards: { lifeForce: (inputs) => Math.max(100, 1500 - (inputs.waste * 52 * config.factors.WASTE)), aetherShards: 10, items: { 'purified_polymer': 2 }},
+                nextQuest: 'q_waste_2'
+            },
+            'q_waste_2': {
+                name: "The Cycle of Matter", chain: "Waste",
+                description: "Much of what was discarded can be reborn. Ensure you recycle all eligible materials for one week. Their essence will be repurposed on Terra-Nova.",
+                objectives: [{ type: 'pledge', label: "I pledge to recycle everything possible this week." }],
+                rewards: { lifeForce: () => 1000, aetherShards: 20, items: { 'purified_polymer': 5 }},
+                nextQuest: 'q_waste_3'
+            },
+            'q_waste_3': {
+                name: "The One-Use Scourge", chain: "Waste",
+                description: "Single-use plastics were a plague. Forgo them for a day. No disposable cups, cutlery, or bags. This act of conscious choice is a powerful signal.",
+                objectives: [{ type: 'pledge', label: "I pledge to avoid single-use plastics today." }],
+                rewards: { lifeForce: () => 1500, aetherShards: 30, items: { 'crystal_shard': 3 }},
+                nextQuest: 'q_ecology_1' // Link to next chain
+            },
+
+            // == Chain 4: The Cultivator's Song (Ecology) ==
+            'q_ecology_1': {
+                name: "The Meatless Mandate", chain: "Ecology",
+                description: "The industrial production of sustenance in the old world was incredibly taxing. Abstain from meat for one day to lessen the burden.",
+                objectives: [{ type: 'pledge', label: "I pledge to have a meat-free day." }],
+                rewards: { lifeForce: () => 1200, aetherShards: 20, items: { 'bio_sample': 2 }},
+                nextQuest: 'q_ecology_2'
+            },
+            'q_ecology_2': {
+                name: "The Soil Keepers", chain: "Ecology",
+                description: "Life begins in the soil. Divert your organic waste from landfill by starting a compost system. This creates a font of life for Terra-Nova.",
+                objectives: [{ type: 'pledge', label: "I pledge to begin composting organic waste." }],
+                rewards: { lifeForce: () => 2000, aetherShards: 40, items: { 'bio_sample': 5, 'living_seed': 1 }},
+                nextQuest: 'q_ecology_3'
+            },
+            'q_ecology_3': {
+                name: "A Seed of Hope", chain: "Ecology",
+                description: "Terra-Nova needs native life. Plant a flower, tree, or vegetable native to your local area. This physical link strengthens your bond as Guardian.",
+                objectives: [{ type: 'pledge', label: "I pledge to plant a local native species." }],
+                rewards: { lifeForce: () => 2500, aetherShards: 50, items: { 'living_seed': 3 }},
+                nextQuest: 'q_energy_1' // Loop back to the beginning
+            },
         };
 
         // --- CORE SYSTEMS (AUDIO, UI, FIREBASE) ---
@@ -258,7 +343,7 @@
                         lifeForce: 0, aetherShards: 10,
                         inventory: { 'scrap_metal': 5, 'crystal_shard': 2 },
                         artifacts: [],
-                        quests: { active: 'q001', completed: [] },
+                        quests: { active: 'q_energy_1', completed: [] },
                         planetSeed: Math.random()
                     };
                     await setDoc(userRef, initialUserData);
@@ -273,55 +358,59 @@
         };
         
         // --- MODULAR GAME SYSTEMS ---
-        const planetManager = {
-            scene: null, camera: null, renderer: null, planet: null, isInitialized: false, material: null,
-            init(containerId, seed) {
-                if (this.isInitialized || !document.getElementById(containerId)) return;
-                simplex = new SimplexNoise(seed);
-                const container = document.getElementById(containerId);
-                this.scene = new THREE.Scene();
-                this.camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
-                this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-                this.renderer.setSize(container.clientWidth, container.clientHeight);
-                container.innerHTML = '';
-                container.appendChild(this.renderer.domElement);
-                
-                const geometry = new THREE.SphereGeometry(5, 64, 64);
-                this.material = new THREE.MeshPhongMaterial({ color: 0xffffff });
-                this.planet = new THREE.Mesh(geometry, this.material);
-                this.scene.add(this.planet);
-                
-                const light = new THREE.DirectionalLight(0xffffff, 1.5);
-                light.position.set(5, 3, 5);
-                this.scene.add(light);
-                this.scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-                this.camera.position.z = 10;
-                
-                let isMouseDown = false, mouseX=0, mouseY=0;
-                container.addEventListener('mousedown', (e) => { isMouseDown = true; mouseX = e.clientX; mouseY = e.clientY; });
-                document.addEventListener('mouseup', () => { isMouseDown = false; });
-                document.addEventListener('mousemove', (e) => {
-                    if (isMouseDown && this.planet) {
-                        this.planet.rotation.y += (e.clientX - mouseX) * 0.005;
-                        this.planet.rotation.x += (e.clientY - mouseY) * 0.005;
-                        mouseX = e.clientX; mouseY = e.clientY;
+        const planetManagerFactory = {
+            create() {
+                let instance = {
+                    scene: null, camera: null, renderer: null, planet: null, isInitialized: false, material: null,
+                    init(containerId, seed) {
+                        if (this.isInitialized || !document.getElementById(containerId)) return;
+                        simplex = new SimplexNoise(seed);
+                        const container = document.getElementById(containerId);
+                        this.scene = new THREE.Scene();
+                        this.camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+                        this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                        this.renderer.setSize(container.clientWidth, container.clientHeight);
+                        container.innerHTML = '';
+                        container.appendChild(this.renderer.domElement);
+                        
+                        const geometry = new THREE.SphereGeometry(5, 64, 64);
+                        this.material = new THREE.MeshPhongMaterial({ color: 0xffffff });
+                        this.planet = new THREE.Mesh(geometry, this.material);
+                        this.scene.add(this.planet);
+                        
+                        const light = new THREE.DirectionalLight(0xffffff, 1.5);
+                        light.position.set(5, 3, 5);
+                        this.scene.add(light);
+                        this.scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+                        this.camera.position.z = 10;
+                        
+                        let isMouseDown = false, mouseX=0, mouseY=0;
+                        container.addEventListener('mousedown', (e) => { isMouseDown = true; mouseX = e.clientX; mouseY = e.clientY; });
+                        document.addEventListener('mouseup', () => { isMouseDown = false; });
+                        document.addEventListener('mousemove', (e) => {
+                            if (isMouseDown && this.planet) {
+                                this.planet.rotation.y += (e.clientX - mouseX) * 0.005;
+                                this.planet.rotation.x += (e.clientY - mouseY) * 0.005;
+                                mouseX = e.clientX; mouseY = e.clientY;
+                            }
+                        });
+                        
+                        this.isInitialized = true;
+                        this.animate();
+                    },
+                    animate() {
+                        if (!this.isInitialized) return;
+                        requestAnimationFrame(() => this.animate());
+                        if(this.planet) this.planet.rotation.y += 0.0005;
+                        this.renderer.render(this.scene, this.camera);
+                    },
+                    updatePlanet(percentage) {
+                        const color = new THREE.Color();
+                        color.setHSL(0.55 + (percentage/100) * 0.2, 0.6, 0.3 + (percentage/100)*0.3);
+                        if(this.material) this.material.color = color;
                     }
-                });
-                
-                this.isInitialized = true;
-                this.animate();
-            },
-            animate() {
-                if (!this.isInitialized) return;
-                requestAnimationFrame(() => this.animate());
-                if(this.planet) this.planet.rotation.y += 0.0005;
-                this.renderer.render(this.scene, this.camera);
-            },
-            updatePlanet(percentage) {
-                // Placeholder for procedural texture update
-                const color = new THREE.Color();
-                color.setHSL(0.55 + (percentage/100) * 0.2, 0.6, 0.3 + (percentage/100)*0.3);
-                if(this.material) this.material.color = color;
+                };
+                return instance;
             }
         };
         
@@ -333,12 +422,15 @@
                     const quest = QUESTS_DB[questId];
                     const isCompleted = userData.quests.completed.includes(questId);
                     const isActive = userData.quests.active === questId;
-                    const card = document.createElement('div');
-                    card.className = `quest-card p-4 rounded-lg border-2 border-slate-700 cursor-pointer transition ${isActive ? 'active' : ''} ${isCompleted ? 'opacity-50' : ''}`;
-                    card.setAttribute('data-quest-id', questId);
-                    card.innerHTML = `<h3 class="font-orbitron text-lg ${isActive ? 'text-amber-300' : ''}">${quest.name}</h3><p class="text-xs text-slate-400">${isCompleted ? 'Completed' : (isActive ? 'Active Mission' : 'Available')}</p>`;
-                    if (!isCompleted) card.onclick = () => this.selectMission(questId);
-                    container.appendChild(card);
+                    
+                    if(isCompleted || isActive || userData.quests.completed.includes(Object.values(QUESTS_DB).find(q => q.nextQuest === questId)?.name ? Object.keys(QUESTS_DB).find(key => QUESTS_DB[key] === Object.values(QUESTS_DB).find(q => q.nextQuest === questId)) : null) || questId === 'q_energy_1') {
+                        const card = document.createElement('div');
+                        card.className = `quest-card p-4 rounded-lg border-2 border-slate-700 cursor-pointer transition ${isActive ? 'active' : ''} ${isCompleted ? 'opacity-50' : ''}`;
+                        card.setAttribute('data-quest-id', questId);
+                        card.innerHTML = `<h3 class="font-orbitron text-lg ${isActive ? 'text-amber-300' : ''}">${quest.name}</h3><p class="text-xs text-slate-400">${isCompleted ? 'Completed' : (isActive ? 'Active Mission' : 'Available')}</p>`;
+                        if (!isCompleted) card.onclick = () => this.selectMission(questId);
+                        container.appendChild(card);
+                    }
                 });
             },
             selectMission(questId) {
@@ -370,6 +462,8 @@
                         inputEl = `<div class="relative"><label class="font-semibold text-slate-300">${obj.label}</label><input type="number" placeholder="0" data-key="${obj.key}" class="w-full p-3 mt-2 bg-slate-800/50 border border-slate-600 rounded-lg focus:ring-2 focus:ring-cyan-500 transition text-white"></div>`;
                     } else if (obj.type === 'select') {
                          inputEl = `<div class="relative"><label class="font-semibold text-slate-300">${obj.label}</label><select data-key="${obj.key}" class="w-full p-3 mt-2 bg-slate-800/50 border border-slate-600 rounded-lg focus:ring-2 focus:ring-cyan-500 transition text-white">${Object.entries(obj.options).map(([val, name]) => `<option value="${val}">${name}</option>`).join('')}</select></div>`;
+                    } else if (obj.type === 'pledge') {
+                        inputEl = `<div class="text-center p-4 bg-slate-800/50 border border-slate-600 rounded-lg"><label class="font-semibold text-slate-300">${obj.label}</label></div>`;
                     }
                     inputArea.insertAdjacentHTML('beforeend', inputEl);
                 });
@@ -383,10 +477,12 @@
                 const inputs = {};
                 let allInputsValid = true;
                 quest.objectives.forEach(obj => {
-                    const el = document.querySelector(`#mission-input-area [data-key="${obj.key}"]`);
-                    const value = el.type === 'number' ? el.valueAsNumber : el.value;
-                    if ((!value && value !== 0) || (el.type === 'number' && value < 0)) allInputsValid = false;
-                    inputs[obj.key] = value;
+                    if (obj.type !== 'pledge') {
+                        const el = document.querySelector(`#mission-input-area [data-key="${obj.key}"]`);
+                        const value = el.type === 'number' ? el.valueAsNumber : el.value;
+                        if ((!value && value !== 0) || (el.type === 'number' && value < 0)) allInputsValid = false;
+                        inputs[obj.key] = value;
+                    }
                 });
 
                 if (!allInputsValid) {
@@ -395,7 +491,7 @@
                 }
                 
                 const rewards = quest.rewards;
-                const newLifeForce = rewards.lifeForce(inputs);
+                const newLifeForce = typeof rewards.lifeForce === 'function' ? rewards.lifeForce(inputs) : rewards.lifeForce();
                 const newInventory = { ...state.user.inventory };
                 if (rewards.items) {
                     Object.entries(rewards.items).forEach(([itemId, qty]) => {
@@ -490,40 +586,33 @@
         }
 
         async function main() {
-            // Bind navigation immediately for a responsive UI.
             bindEventListeners();
             
             try {
-                // Initialize Firebase
                 app = initializeApp(config.firebaseConfig);
                 auth = getAuth(app);
                 db = getFirestore(app);
 
-                // Sign in the user
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     await signInWithCustomToken(auth, __initial_auth_token);
                 } else { await signInAnonymously(auth); }
                 state.userId = auth.currentUser.uid;
                 document.getElementById('user-id-display').textContent = state.userId.substring(0, 8);
                 
-                // Set up a real-time listener for user data.
-                // This will automatically update the UI whenever data changes in the backend.
                 const userRef = doc(db, "artifacts", config.appId, "users", state.userId, "profile", "data");
                 onSnapshot(userRef, async (docSnap) => {
                     let userData;
                     if (docSnap.exists()) {
                         userData = docSnap.data();
                     } else {
-                        // Create user if they don't exist, this happens on first load.
                         userData = await firebaseManager.getOrCreateUser(state.userId);
                     }
 
-                    // Initialize the 3D planet only once with the user's unique seed.
-                    if (planetManager && !planetManager.isInitialized) {
+                    if (!planetManager || !planetManager.isInitialized) {
+                       planetManager = planetManagerFactory.create();
                        planetManager.init('terra-nova-container', userData.planetSeed);
                     }
                     
-                    // Update the entire game UI with the latest data.
                     UIManager.updateAll(userData);
                 });
             } catch (error) {
@@ -536,5 +625,4 @@
     </script>
 </body>
 </html>
-
 

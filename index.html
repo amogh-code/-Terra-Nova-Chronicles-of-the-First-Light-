@@ -180,8 +180,7 @@
             maxHealing: 500000, inventorySize: 20,
             factors: { ELECTRICITY: 0.82, PETROL: 2.31, DIESEL: 2.68, ELECTRIC_CAR: 0.05, WASTE: 0.59, AVG_FUEL_EFFICIENCY: 12 },
         };
-        let app, auth, db, audioCtx, simplex;
-        let planetManager;
+        let app, auth, db, audioCtx, simplex, planetManager;
 
         // --- GAME DATABASES (ITEMS, BLUEPRINTS, QUESTS) ---
         const ITEMS_DB = {
@@ -192,7 +191,9 @@
             'solar_wafer': { name: 'Solar Wafer', emoji: '☀️', description: 'A thin slice of photo-reactive material.'},
             'kinetic_motor': { name: 'Kinetic Motor', emoji: '⚙️', description: 'Stores and converts energy from motion.'},
             'purified_polymer': { name: 'Purified Polymer', emoji: '♻️', description: 'Reconstituted matter, clean and versatile.'},
-            'living_seed': { name: 'Living Seed', emoji: '🌱', description: 'A dormant seed holding ancient genetic code.'}
+            'living_seed': { name: 'Living Seed', emoji: '🌱', description: 'A dormant seed holding ancient genetic code.'},
+            'data_archive': { name: 'Data Archive', emoji: '💽', description: 'Fragmented data from Old Earth.'},
+            'comms_relay': { name: 'Comms Relay', emoji: '📡', description: 'Can amplify faint signals across the void.'},
         };
 
         const BLUEPRINTS_DB = {
@@ -214,15 +215,15 @@
                 name: "Phantom Menace", chain: "Energy",
                 description: "Energy readings are unstable. LUX suspects 'phantom loads' from devices on standby. Spend a day ensuring all unused electronics are fully unplugged.",
                 objectives: [{ type: 'pledge', label: "I pledge to unplug phantom loads today." }],
-                rewards: { lifeForce: () => 500, aetherShards: 10, items: { 'solar_wafer': 1 }},
+                rewards: { lifeForce: 500, aetherShards: 10, items: { 'solar_wafer': 1 }},
                 nextQuest: 'q_energy_3'
             },
              'q_energy_3': {
                 name: "Let There Be Light", chain: "Energy",
                 description: "The old world used inefficient lighting. Scan your living space and confirm you use energy-efficient LED bulbs. Each one is a small star for Terra-Nova.",
                 objectives: [{ type: 'input', label: "How many non-LED bulbs did you replace?", key: 'bulbs_replaced' }],
-                rewards: { lifeForce: (inputs) => 250 * inputs.bulbs_replaced, aetherShards: 5 * inputs.bulbs_replaced, items: { 'solar_wafer': 2 }},
-                nextQuest: 'q_transport_1' // Link to next chain
+                rewards: { lifeForce: (inputs) => 250 * inputs.bulbs_replaced, aetherShards: (inputs) => 5 * inputs.bulbs_replaced, items: { 'solar_wafer': 2 }},
+                nextQuest: 'q_transport_1'
             },
 
             // == Chain 2: The Nomad's Path (Transportation) ==
@@ -240,15 +241,15 @@
                 name: "The Road Less Traveled", chain: "Transport",
                 description: "Individual transport units are inefficient. Utilize a mass transit system (bus, train, metro) for a day to harmonize your travel energy.",
                 objectives: [{ type: 'pledge', label: "I pledge to use public transport today." }],
-                rewards: { lifeForce: () => 750, aetherShards: 15, items: { 'kinetic_motor': 1 }},
+                rewards: { lifeForce: 750, aetherShards: 15, items: { 'kinetic_motor': 1 }},
                 nextQuest: 'q_transport_3'
             },
             'q_transport_3': {
                 name: "Kinetic Harvest", chain: "Transport",
                 description: "LUX requires kinetic data. Choose a human-powered mode of transport (walk, cycle) for a short journey you would normally drive.",
                 objectives: [{ type: 'input', label: "Distance traveled by foot/bike (km)", key: 'km_powered' }],
-                rewards: { lifeForce: (inputs) => 500 * inputs.km_powered, aetherShards: 10 * inputs.km_powered, items: { 'kinetic_motor': 1, 'scrap_metal': 2 }},
-                nextQuest: 'q_waste_1' // Link to next chain
+                rewards: { lifeForce: (inputs) => 500 * inputs.km_powered, aetherShards: (inputs) => 10 * inputs.km_powered, items: { 'kinetic_motor': 1, 'scrap_metal': 2 }},
+                nextQuest: 'q_waste_1'
             },
             
             // == Chain 3: The Warden's Duty (Waste) ==
@@ -263,15 +264,15 @@
                 name: "The Cycle of Matter", chain: "Waste",
                 description: "Much of what was discarded can be reborn. Ensure you recycle all eligible materials for one week. Their essence will be repurposed on Terra-Nova.",
                 objectives: [{ type: 'pledge', label: "I pledge to recycle everything possible this week." }],
-                rewards: { lifeForce: () => 1000, aetherShards: 20, items: { 'purified_polymer': 5 }},
+                rewards: { lifeForce: 1000, aetherShards: 20, items: { 'purified_polymer': 5 }},
                 nextQuest: 'q_waste_3'
             },
             'q_waste_3': {
                 name: "The One-Use Scourge", chain: "Waste",
                 description: "Single-use plastics were a plague. Forgo them for a day. No disposable cups, cutlery, or bags. This act of conscious choice is a powerful signal.",
                 objectives: [{ type: 'pledge', label: "I pledge to avoid single-use plastics today." }],
-                rewards: { lifeForce: () => 1500, aetherShards: 30, items: { 'crystal_shard': 3 }},
-                nextQuest: 'q_ecology_1' // Link to next chain
+                rewards: { lifeForce: 1500, aetherShards: 30, items: { 'crystal_shard': 3 }},
+                nextQuest: 'q_ecology_1'
             },
 
             // == Chain 4: The Cultivator's Song (Ecology) ==
@@ -279,21 +280,44 @@
                 name: "The Meatless Mandate", chain: "Ecology",
                 description: "The industrial production of sustenance in the old world was incredibly taxing. Abstain from meat for one day to lessen the burden.",
                 objectives: [{ type: 'pledge', label: "I pledge to have a meat-free day." }],
-                rewards: { lifeForce: () => 1200, aetherShards: 20, items: { 'bio_sample': 2 }},
+                rewards: { lifeForce: 1200, aetherShards: 20, items: { 'bio_sample': 2 }},
                 nextQuest: 'q_ecology_2'
             },
             'q_ecology_2': {
                 name: "The Soil Keepers", chain: "Ecology",
                 description: "Life begins in the soil. Divert your organic waste from landfill by starting a compost system. This creates a font of life for Terra-Nova.",
                 objectives: [{ type: 'pledge', label: "I pledge to begin composting organic waste." }],
-                rewards: { lifeForce: () => 2000, aetherShards: 40, items: { 'bio_sample': 5, 'living_seed': 1 }},
+                rewards: { lifeForce: 2000, aetherShards: 40, items: { 'bio_sample': 5, 'living_seed': 1 }},
                 nextQuest: 'q_ecology_3'
             },
             'q_ecology_3': {
                 name: "A Seed of Hope", chain: "Ecology",
                 description: "Terra-Nova needs native life. Plant a flower, tree, or vegetable native to your local area. This physical link strengthens your bond as Guardian.",
                 objectives: [{ type: 'pledge', label: "I pledge to plant a local native species." }],
-                rewards: { lifeForce: () => 2500, aetherShards: 50, items: { 'living_seed': 3 }},
+                rewards: { lifeForce: 2500, aetherShards: 50, items: { 'living_seed': 3 }},
+                nextQuest: 'q_info_1'
+            },
+
+            // == Chain 5: The Information Age (Data) ==
+            'q_info_1': {
+                name: "Digital Ghosts", chain: "Data",
+                description: "Even the digital realm consumes energy. Clear out 1GB of old files, emails, or photos from cloud storage to reduce the load on server farms across your world.",
+                objectives: [{ type: 'pledge', label: "I pledge to clear 1GB of digital clutter." }],
+                rewards: { lifeForce: 800, aetherShards: 25, items: { 'data_archive': 1 }},
+                nextQuest: 'q_info_2'
+            },
+            'q_info_2': {
+                name: "Signal from the Void", chain: "Data",
+                description: "Constant connection is a drain. Reduce your non-essential screen time by one hour today to conserve energy and find clarity.",
+                objectives: [{ type: 'pledge', label: "I pledge to reduce my screen time." }],
+                rewards: { lifeForce: 1000, aetherShards: 15, items: { 'comms_relay': 1 }},
+                nextQuest: 'q_info_3'
+            },
+            'q_info_3': {
+                name: "Knowledge is Power", chain: "Data",
+                description: "A Guardian must be wise. Read an article or watch a documentary about an environmental topic to gain deeper insight.",
+                objectives: [{ type: 'pledge', label: "I pledge to learn something new about ecology." }],
+                rewards: { lifeForce: 500, aetherShards: 50 },
                 nextQuest: 'q_energy_1' // Loop back to the beginning
             },
         };
@@ -360,8 +384,9 @@
         // --- MODULAR GAME SYSTEMS ---
         const planetManagerFactory = {
             create() {
-                let instance = {
+                return {
                     scene: null, camera: null, renderer: null, planet: null, isInitialized: false, material: null,
+                    atmosphere: null, clouds: null, cityLights: null,
                     init(containerId, seed) {
                         if (this.isInitialized || !document.getElementById(containerId)) return;
                         simplex = new SimplexNoise(seed);
@@ -373,15 +398,37 @@
                         container.innerHTML = '';
                         container.appendChild(this.renderer.domElement);
                         
+                        const loader = new THREE.TextureLoader();
+
                         const geometry = new THREE.SphereGeometry(5, 64, 64);
-                        this.material = new THREE.MeshPhongMaterial({ color: 0xffffff });
+                        this.material = new THREE.MeshPhongMaterial({ color: 0xcccccc });
                         this.planet = new THREE.Mesh(geometry, this.material);
                         this.scene.add(this.planet);
                         
+                        // Atmosphere
+                        const atmosphereGeo = new THREE.SphereGeometry(5.2, 64, 64);
+                        const atmosphereMat = new THREE.MeshPhongMaterial({ color: 0x67e8f9, transparent: true, opacity: 0.1 });
+                        this.atmosphere = new THREE.Mesh(atmosphereGeo, atmosphereMat);
+                        this.scene.add(this.atmosphere);
+
+                        // Clouds
+                        const cloudGeo = new THREE.SphereGeometry(5.05, 64, 64);
+                        const cloudTexture = loader.load('https://raw.githubusercontent.com/stemkoski/stemkoski.github.com/master/Three.js/images/clouds.png');
+                        const cloudMat = new THREE.MeshPhongMaterial({ map: cloudTexture, transparent: true, opacity: 0 });
+                        this.clouds = new THREE.Mesh(cloudGeo, cloudMat);
+                        this.scene.add(this.clouds);
+
+                        // City Lights
+                        const lightsGeo = new THREE.SphereGeometry(5.01, 64, 64);
+                        const lightsTexture = loader.load('https://raw.githubusercontent.com/stemkoski/stemkoski.github.com/master/Three.js/images/earth-lights-4096.png');
+                        const lightsMat = new THREE.MeshBasicMaterial({ map: lightsTexture, color: 0xffff00, transparent: true, opacity: 0, blending: THREE.AdditiveBlending });
+                        this.cityLights = new THREE.Mesh(lightsGeo, lightsMat);
+                        this.planet.add(this.cityLights); // Add to planet to rotate together
+
                         const light = new THREE.DirectionalLight(0xffffff, 1.5);
-                        light.position.set(5, 3, 5);
+                        light.position.set(10, 5, 10);
                         this.scene.add(light);
-                        this.scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+                        this.scene.add(new THREE.AmbientLight(0xffffff, 0.3));
                         this.camera.position.z = 10;
                         
                         let isMouseDown = false, mouseX=0, mouseY=0;
@@ -402,15 +449,19 @@
                         if (!this.isInitialized) return;
                         requestAnimationFrame(() => this.animate());
                         if(this.planet) this.planet.rotation.y += 0.0005;
+                        if(this.clouds) this.clouds.rotation.y += 0.0007;
                         this.renderer.render(this.scene, this.camera);
                     },
                     updatePlanet(percentage) {
+                        const p = percentage / 100;
                         const color = new THREE.Color();
-                        color.setHSL(0.55 + (percentage/100) * 0.2, 0.6, 0.3 + (percentage/100)*0.3);
+                        color.setHSL(0.55 + p * 0.2, 0.6, 0.3 + p * 0.3);
                         if(this.material) this.material.color = color;
+                        if(this.atmosphere) this.atmosphere.material.opacity = p * 0.3;
+                        if(this.clouds) this.clouds.material.opacity = p * 0.8;
+                        if(this.cityLights) this.cityLights.material.opacity = Math.max(0, (p - 0.9) * 10);
                     }
                 };
-                return instance;
             }
         };
         
@@ -423,7 +474,9 @@
                     const isCompleted = userData.quests.completed.includes(questId);
                     const isActive = userData.quests.active === questId;
                     
-                    if(isCompleted || isActive || userData.quests.completed.includes(Object.values(QUESTS_DB).find(q => q.nextQuest === questId)?.name ? Object.keys(QUESTS_DB).find(key => QUESTS_DB[key] === Object.values(QUESTS_DB).find(q => q.nextQuest === questId)) : null) || questId === 'q_energy_1') {
+                    const isUnlocked = isCompleted || isActive || userData.quests.completed.includes(Object.keys(QUESTS_DB).find(key => QUESTS_DB[key].nextQuest === questId)) || questId === 'q_energy_1';
+                    
+                    if(isUnlocked) {
                         const card = document.createElement('div');
                         card.className = `quest-card p-4 rounded-lg border-2 border-slate-700 cursor-pointer transition ${isActive ? 'active' : ''} ${isCompleted ? 'opacity-50' : ''}`;
                         card.setAttribute('data-quest-id', questId);
@@ -474,14 +527,14 @@
                     return;
                 }
                 const quest = QUESTS_DB[state.activeMissionId];
-                const inputs = {};
+                const missionInputs = {};
                 let allInputsValid = true;
                 quest.objectives.forEach(obj => {
                     if (obj.type !== 'pledge') {
                         const el = document.querySelector(`#mission-input-area [data-key="${obj.key}"]`);
                         const value = el.type === 'number' ? el.valueAsNumber : el.value;
                         if ((!value && value !== 0) || (el.type === 'number' && value < 0)) allInputsValid = false;
-                        inputs[obj.key] = value;
+                        missionInputs[obj.key] = value;
                     }
                 });
 
@@ -491,7 +544,9 @@
                 }
                 
                 const rewards = quest.rewards;
-                const newLifeForce = typeof rewards.lifeForce === 'function' ? rewards.lifeForce(inputs) : rewards.lifeForce();
+                const newLifeForce = typeof rewards.lifeForce === 'function' ? rewards.lifeForce(missionInputs) : rewards.lifeForce;
+                const newAetherShards = typeof rewards.aetherShards === 'function' ? rewards.aetherShards(missionInputs) : rewards.aetherShards;
+
                 const newInventory = { ...state.user.inventory };
                 if (rewards.items) {
                     Object.entries(rewards.items).forEach(([itemId, qty]) => {
@@ -500,7 +555,7 @@
                 }
                 const updatedData = {
                     lifeForce: state.user.lifeForce + newLifeForce,
-                    aetherShards: state.user.aetherShards + rewards.aetherShards,
+                    aetherShards: state.user.aetherShards + newAetherShards,
                     inventory: newInventory,
                     quests: {
                         active: quest.nextQuest,
@@ -607,7 +662,6 @@
                     } else {
                         userData = await firebaseManager.getOrCreateUser(state.userId);
                     }
-
                     if (!planetManager || !planetManager.isInitialized) {
                        planetManager = planetManagerFactory.create();
                        planetManager.init('terra-nova-container', userData.planetSeed);

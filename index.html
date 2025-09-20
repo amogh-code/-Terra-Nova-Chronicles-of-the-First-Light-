@@ -11,14 +11,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --cyan-glow: #67e8f9;
-            --cyan-deep: #0891b2;
-            --slate-dark: #0f172a;
-            --slate-light: #1e293b;
-            --amber-glow: #f59e0b;
+            --cyan-glow: #67e8f9; --cyan-deep: #0891b2; --slate-dark: #0f172a;
+            --slate-light: #1e293b; --amber-glow: #f59e0b; --amber-deep: #d97706;
         }
         @keyframes gradient-animation { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes pulse-glow {
             0%, 100% { box-shadow: 0 0 5px var(--cyan-glow), 0 0 10px var(--cyan-glow), 0 0 15px var(--cyan-deep); }
             50% { box-shadow: 0 0 10px var(--cyan-glow), 0 0 20px var(--cyan-deep), 0 0 40px var(--cyan-deep); }
@@ -46,25 +43,26 @@
             box-shadow: 0 0 15px rgba(56, 189, 248, 0.3); border: 1px solid rgba(56, 189, 248, 0.5);
             text-transform: uppercase; letter-spacing: 1px; padding: 0.75rem 1.5rem;
         }
-        .btn-primary:hover { transform: scale(1.05); box-shadow: 0 0 25px rgba(56, 189, 248, 0.6); }
-        .btn-primary:disabled { background-image: none; background-color: #334155; cursor: not-allowed; transform: none; box-shadow: none; border-color: #475569; }
+        .btn-primary:hover:not(:disabled) { transform: scale(1.05); box-shadow: 0 0 25px rgba(56, 189, 248, 0.6); }
+        .btn-primary:disabled { background-image: none; background-color: #334155; cursor: not-allowed; transform: none; box-shadow: none; border-color: #475569; opacity: 0.6; }
         .nav-link { transition: all 0.3s ease; position: relative; padding: 10px 0; cursor: pointer; color: #94a3b8; font-size: 0.9rem; }
         .nav-link.active, .nav-link:hover { color: #f0f9ff; text-shadow: 0 0 8px var(--cyan-glow); }
         .nav-link.active::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 2px; background-color: var(--cyan-glow); border-radius: 2px; animation: slideIn 0.3s ease-out; box-shadow: 0 0 5px var(--cyan-glow); }
         @keyframes slideIn { from { width: 0; } to { width: 100%; } }
-        .page { animation: pageTransition 0.8s ease-out; }
-        @keyframes pageTransition { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        #terra-nova-container { aspect-ratio: 1 / 1; max-height: 70vh; cursor: grab; }
+        .page { animation: fadeIn 0.8s ease-out; }
         .progress-bar { background-color: rgba(8, 145, 178, 0.2); border-radius: 999px; overflow: hidden; border: 1px solid rgba(8, 145, 178, 0.4); }
         .progress-bar-inner { height: 100%; background: linear-gradient(to right, var(--cyan-glow), var(--cyan-deep)); border-radius: 999px; transition: width 0.8s ease-in-out; }
         .lux-dialog { animation: fadeIn 0.5s ease-out; }
         .quest-card.active { border-color: var(--amber-glow); box-shadow: 0 0 20px rgba(245, 158, 11, 0.3); }
+        .inventory-slot { transition: all 0.2s ease; }
         .inventory-slot.occupied { background-color: rgba(56, 189, 248, 0.1); border-color: var(--cyan-deep); }
+        .inventory-slot:hover { background-color: rgba(56, 189, 248, 0.2); }
+        .blueprint.can-craft { border-left-color: var(--cyan-glow); }
     </style>
 </head>
 <body class="text-slate-300">
-    <div id="custom-alert" class="p-4 rounded-lg shadow-lg hidden fixed top-5 left-1/2 -translate-x-1/2 z-[100] font-semibold"></div>
-    <div id="global-event-ticker" class="hidden fixed top-0 left-0 w-full bg-amber-500/80 text-black text-center p-2 z-[99] font-orbitron"></div>
+    <div id="custom-alert" class="p-4 rounded-lg shadow-lg hidden fixed top-5 left-1/2 -translate-x-1/2 z-[100] font-semibold border"></div>
+    <div id="global-event-ticker" class="hidden fixed top-0 left-0 w-full bg-amber-500/90 text-black text-center p-2 z-[99] font-orbitron"></div>
 
     <div class="container mx-auto p-4 md:p-8 max-w-screen-2xl">
         <header class="text-center mb-6">
@@ -87,7 +85,7 @@
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div class="lg:col-span-2 card p-4 flex items-center justify-center relative">
                         <div id="terra-nova-container" class="w-full h-full"></div>
-                        <div id="lux-container" class="absolute bottom-4 right-4 w-48 lux-dialog hidden">
+                        <div id="lux-container" class="absolute bottom-4 right-4 w-56 lux-dialog hidden">
                             <div class="bg-slate-900/80 p-3 rounded-lg border border-cyan-500/30">
                                 <p class="font-orbitron text-cyan-300 text-sm">LUX:</p>
                                 <p id="lux-dialog-text" class="text-xs text-slate-300"></p>
@@ -112,7 +110,7 @@
                             </div>
                         </div>
                         <div id="inventory-preview" class="mt-4">
-                             <h3 class="font-orbitron text-lg text-cyan-300 mb-2">INVENTORY</h3>
+                             <h3 class="font-orbitron text-lg text-cyan-300 mb-2">INVENTORY (Recent)</h3>
                              <div id="inventory-slots-preview" class="grid grid-cols-5 gap-2"></div>
                         </div>
                     </div>
@@ -126,11 +124,17 @@
                         <h2 class="font-orbitron text-2xl text-cyan-300 mb-4">MISSION LOG</h2>
                         <div id="mission-list" class="space-y-3"></div>
                     </div>
-                    <div id="mission-details-panel" class="md:col-span-2 card p-8 hidden">
-                        <h2 id="mission-title" class="font-orbitron text-3xl text-amber-300 mb-2"></h2>
-                        <p id="mission-description" class="text-slate-400 mb-6"></p>
-                        <div id="mission-input-area"></div>
-                        <button id="mission-complete-btn" class="btn-primary mt-6 w-full p-4">Complete Mission</button>
+                    <div id="mission-details-panel" class="md:col-span-2 card p-8 opacity-0 transition-opacity duration-500">
+                        <div id="mission-placeholder" class="text-center text-slate-500 flex flex-col items-center justify-center h-full">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-slate-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
+                            <p>Select a mission to view details.</p>
+                        </div>
+                        <div id="mission-content" class="hidden">
+                             <h2 id="mission-title" class="font-orbitron text-3xl text-amber-300 mb-2"></h2>
+                            <p id="mission-description" class="text-slate-400 mb-6"></p>
+                            <div id="mission-input-area" class="space-y-4"></div>
+                            <button id="mission-complete-btn" class="btn-primary mt-6 w-full p-4">Complete Mission</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -139,12 +143,12 @@
             <div id="workshop-page" class="page hidden">
                  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <div class="card p-8">
-                         <h2 class="font-orbitron text-3xl text-cyan-300 mb-6">INVENTORY & CRAFTING</h2>
+                         <h2 class="font-orbitron text-3xl text-cyan-300 mb-6">INVENTORY</h2>
                          <div class="grid grid-cols-5 gap-4" id="inventory-grid"></div>
                     </div>
                      <div class="card p-8">
                          <h2 class="font-orbitron text-3xl text-cyan-300 mb-6">BLUEPRINTS</h2>
-                         <div id="blueprint-list" class="space-y-4"></div>
+                         <div id="blueprint-list" class="space-y-4 max-h-[60vh] overflow-y-auto pr-2"></div>
                      </div>
                  </div>
             </div>
@@ -160,140 +164,377 @@
         </main>
     </div>
     
-    <footer class="text-center p-6 mt-10"><p class="text-slate-500 text-sm">An Amogh Kris & Hemashree Creation for a New Universe</p></footer>
+    <footer class="text-center p-6 mt-10"><p class="text-slate-500 text-sm">An Amogh Kris Creation for a New Universe</p></footer>
 
     <script type="module">
+        // --- CORE GAME INITIALIZATION & IMPORTS ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection, query, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- CORE GAME SETUP ---
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        let userId = null;
-        let audioCtx;
-        const MAX_HEALING = 500000;
-        let simplex = new SimplexNoise();
+        // --- GLOBAL STATE & CONFIGURATION ---
+        const state = { userId: null, user: null, activeMissionId: null, };
+        const config = {
+            appId: typeof __app_id !== 'undefined' ? __app_id : 'default-app-id',
+            firebaseConfig: typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {},
+            maxHealing: 500000, inventorySize: 20,
+            factors: { ELECTRICITY: 0.82, PETROL: 2.31, DIESEL: 2.68, ELECTRIC_CAR: 0.05, WASTE: 0.59, AVG_FUEL_EFFICIENCY: 12 },
+        };
+        let app, auth, db, audioCtx, simplex;
 
-        // --- GAME DATABASES (EXPANDED) ---
-        const BLUEPRINTS = { /* ... extensive list of blueprints ... */ };
-        const ITEMS = { /* ... extensive list of items ... */ };
-        const QUESTS = { /* ... dynamic quest chains ... */ };
-
-        // --- SOUND ENGINE ---
-        function playSound(type) { /* ... existing sound logic ... */ }
-
-        // --- UI & NOTIFICATION MANAGER ---
-        function showCustomAlert(message, isSuccess = false) { /* ... existing alert logic ... */ }
-        function showGlobalEvent(message) { /* ... new ticker logic ... */ }
-
-        // --- FIREBASE & USER STATE MANAGER ---
-        async function getOrCreateUser(uid) {
-            const userRef = doc(db, "artifacts", appId, "users", uid, "profile", "data");
-            let userSnap = await getDoc(userRef);
-            if (!userSnap.exists()) {
-                await setDoc(userRef, { 
-                    lifeForce: 0, aetherShards: 10, inventory: {}, artifacts: [], 
-                    quests: { active: 'q001', completed: [] }, planetSeed: Math.random() 
-                });
-                userSnap = await getDoc(userRef);
+        // --- GAME DATABASES (ITEMS, BLUEPRINTS, QUESTS) ---
+        const ITEMS_DB = {
+            'scrap_metal': { name: 'Scrap Metal', emoji: '🔩', description: 'Basic building material.' },
+            'crystal_shard': { name: 'Crystal Shard', emoji: '💎', description: 'A fragment of pure energy.'},
+            'hydro_cell': { name: 'Hydro-Cell', emoji: '💧', description: 'Contains purified water.'},
+            'bio_sample': { name: 'Bio-Sample', emoji: '🌿', description: 'Organic matter, key to life.'},
+        };
+        const BLUEPRINTS_DB = {
+            'hydro_purifier': { name: 'Hydro Purifier', emoji: '🚰', materials: { 'scrap_metal': 5, 'crystal_shard': 2 }, result: 'hydro_cell', resultQty: 1, description: "Creates pure water cells from basic materials." },
+            'bio_cultivator': { name: 'Bio-Cultivator', emoji: '🌱', materials: { 'hydro_cell': 2, 'scrap_metal': 3 }, result: 'bio_sample', resultQty: 1, description: "Generates simple organic matter." }
+        };
+        const QUESTS_DB = {
+            'q001': {
+                name: "The First Spark",
+                description: "LUX detects a faint energy signature. Channel your first Life Force by reporting your energy consumption. This is the first step to awakening Terra-Nova.",
+                objectives: [{ type: 'input', label: 'Monthly Energy Consumption (kWh)', key: 'electricity' }],
+                rewards: { lifeForce: (inputs) => Math.max(100, 2000 - (inputs.electricity * 12 * config.factors.ELECTRICITY) / 2), aetherShards: 5, items: { 'scrap_metal': 3, 'crystal_shard': 1 }},
+                nextQuest: 'q002'
+            },
+            'q002': {
+                name: "Echoes of Motion",
+                description: "The planet stirs. Your movement across your own world resonates here. Report your travel to gather more resources.",
+                objectives: [
+                    { type: 'input', label: 'Weekly Travel Distance (km)', key: 'transport' },
+                    { type: 'select', label: 'Vehicle Type', key: 'fuel', options: { 'petrol': 'Fossil-Fueled', 'diesel': 'Diesel-Powered', 'electric': 'Electric Drive' } }
+                ],
+                rewards: { lifeForce: (inputs) => Math.max(100, 3000 - (inputs.transport * 52 * config.factors.PETROL) / 2), aetherShards: 5, items: { 'scrap_metal': 5 }},
+                nextQuest: 'q001'
             }
-            return userSnap.data();
-        }
-        async function updateUser(data, isBatch=false) { /* ... modified to handle complex state ... */ }
-
-        // --- MAIN UI RENDERER ---
-        function updateUI(userData) { /* ... expanded to update all new UI elements ... */ }
-        function updatePlanetStatus(percentage) { /* ... existing logic ... */ }
-        
-        // --- LUX AI COMPANION ---
-        const lux = {
-            speak(message) { /* ... controls Lux's dialog box ... */ }
         };
 
-        // --- PLANET RENDERER (UPGRADED) ---
-        const planetManager = {
-            // ... existing init and animate
-            init(containerId, seed) { /* ... modified to use simplex noise for procedural generation ... */ },
-            updatePlanet(percentage) { /* ... modified for smoother transitions ... */ }
-        };
+        // --- CORE SYSTEMS (AUDIO, UI, FIREBASE) ---
+        const UIManager = {
+            showCustomAlert(message, isSuccess = false) {
+                const el = document.getElementById('custom-alert');
+                el.textContent = message;
+                el.className = `p-4 rounded-lg shadow-lg fixed top-5 left-1/2 -translate-x-1/2 z-[100] font-semibold border ${isSuccess ? 'bg-cyan-500/80 border-cyan-300' : 'bg-red-500/80 border-red-300'}`;
+                el.classList.remove('hidden');
+                setTimeout(() => el.classList.add('hidden'), 4000);
+            },
+            updateAll(userData) {
+                if (!userData) return;
+                state.user = userData;
+                const { lifeForce, aetherShards, inventory } = userData;
+                document.getElementById('life-force-display').textContent = `${(lifeForce || 0).toLocaleString()} LF`;
+                document.getElementById('aether-shards-display').textContent = `${(aetherShards || 0).toLocaleString()} 💠`;
 
-        // --- NEXUS (SOCIAL HUB) RENDERER ---
-        const nexusManager = {
-            init(containerId) { /* ... new Three.js scene for multiple planets ... */ },
-            addGuardianPlanet(guardianData) { /* ... adds other user planets to the scene ... */ }
-        };
+                const percentage = Math.min(100, ((lifeForce || 0) / config.maxHealing) * 100);
+                const bar = document.getElementById('healing-bar');
+                bar.style.width = `${percentage}%`;
+                bar.textContent = `${Math.floor(percentage)}%`;
 
-        // --- MISSION & QUEST SYSTEM ---
-        const missionManager = {
-            activeMission: null,
-            init(userData) { /* ... loads current mission ... */ },
-            renderMissionList(userData) { /* ... displays available/completed missions ... */ },
-            selectMission(questId) { /* ... displays mission details and objectives ... */ },
-            completeMission() { /* ... processes mission completion and rewards ... */ }
+                this.updatePlanetStatus(percentage);
+                workshopManager.renderInventory(inventory);
+                workshopManager.renderBlueprints(inventory);
+                missionManager.renderMissionList(userData);
+                if(planetManager && planetManager.isInitialized) planetManager.updatePlanet(percentage);
+            },
+            updatePlanetStatus(percentage) {
+                const statusEl = document.getElementById('planet-status');
+                 if (percentage < 10) statusEl.textContent = "A desolate rock, awaiting the first spark of life.";
+                else if (percentage < 30) statusEl.textContent = "The first oceans begin to form, swirling with potential.";
+                else if (percentage < 60) statusEl.textContent = "Verdant continents emerge from the seas. Life takes root.";
+                else if (percentage < 90) statusEl.textContent = "A vibrant ecosystem thrives. The air clears.";
+                else statusEl.textContent = "Terra-Nova is reborn. A testament to your guardianship.";
+            },
         };
-
-        // --- WORKSHOP & INVENTORY SYSTEM ---
-        const workshopManager = {
-            renderInventory(inventory) { /* ... displays user's items in grid ... */ },
-            renderBlueprints(inventory) { /* ... shows craftable items ... */ },
-            craftItem(blueprintId) { /* ... handles crafting logic ... */ }
-        };
-        
-        // --- GLOBAL EVENT SYSTEM ---
-        function listenToGlobalEvents() {
-            const globalRef = doc(db, "artifacts", appId, "public/data/globalEvents");
-            onSnapshot(globalRef, (doc) => {
-                const event = doc.data();
-                if (event && event.active && new Date(event.expires.seconds * 1000) > new Date()) {
-                    showGlobalEvent(`ALERT: ${event.name} in progress! ${event.description}`);
-                } else {
-                    document.getElementById('global-event-ticker').classList.add('hidden');
+        const firebaseManager = {
+            async getOrCreateUser(uid) {
+                const userRef = doc(db, "artifacts", config.appId, "users", uid, "profile", "data");
+                let userSnap = await getDoc(userRef);
+                if (!userSnap.exists()) {
+                    const initialUserData = {
+                        lifeForce: 0, aetherShards: 10,
+                        inventory: { 'scrap_metal': 5, 'crystal_shard': 2 },
+                        artifacts: [],
+                        quests: { active: 'q001', completed: [] },
+                        planetSeed: Math.random()
+                    };
+                    await setDoc(userRef, initialUserData);
+                    return initialUserData;
                 }
-            });
-        }
+                return userSnap.data();
+            },
+            async updateUser(uid, data) {
+                 const userRef = doc(db, "artifacts", config.appId, "users", uid, "profile", "data");
+                 await updateDoc(userRef, data);
+            }
+        };
+        
+        // --- MODULAR GAME SYSTEMS ---
+        const planetManager = {
+            scene: null, camera: null, renderer: null, planet: null, isInitialized: false, material: null,
+            init(containerId, seed) {
+                if (this.isInitialized || !document.getElementById(containerId)) return;
+                simplex = new SimplexNoise(seed);
+                const container = document.getElementById(containerId);
+                this.scene = new THREE.Scene();
+                this.camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+                this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                this.renderer.setSize(container.clientWidth, container.clientHeight);
+                container.innerHTML = '';
+                container.appendChild(this.renderer.domElement);
+                
+                const geometry = new THREE.SphereGeometry(5, 64, 64);
+                this.material = new THREE.MeshPhongMaterial({ color: 0xffffff });
+                this.planet = new THREE.Mesh(geometry, this.material);
+                this.scene.add(this.planet);
+                
+                const light = new THREE.DirectionalLight(0xffffff, 1.5);
+                light.position.set(5, 3, 5);
+                this.scene.add(light);
+                this.scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+                this.camera.position.z = 10;
+                
+                let isMouseDown = false, mouseX=0, mouseY=0;
+                container.addEventListener('mousedown', (e) => { isMouseDown = true; mouseX = e.clientX; mouseY = e.clientY; });
+                document.addEventListener('mouseup', () => { isMouseDown = false; });
+                document.addEventListener('mousemove', (e) => {
+                    if (isMouseDown && this.planet) {
+                        this.planet.rotation.y += (e.clientX - mouseX) * 0.005;
+                        this.planet.rotation.x += (e.clientY - mouseY) * 0.005;
+                        mouseX = e.clientX; mouseY = e.clientY;
+                    }
+                });
+                
+                this.isInitialized = true;
+                this.animate();
+            },
+            animate() {
+                if (!this.isInitialized) return;
+                requestAnimationFrame(() => this.animate());
+                if(this.planet) this.planet.rotation.y += 0.0005;
+                this.renderer.render(this.scene, this.camera);
+            },
+            updatePlanet(percentage) {
+                // Placeholder for procedural texture update
+                const color = new THREE.Color();
+                color.setHSL(0.55 + (percentage/100) * 0.2, 0.6, 0.3 + (percentage/100)*0.3);
+                if(this.material) this.material.color = color;
+            }
+        };
+        
+        const missionManager = {
+            renderMissionList(userData) {
+                const container = document.getElementById('mission-list');
+                container.innerHTML = '';
+                Object.keys(QUESTS_DB).forEach(questId => {
+                    const quest = QUESTS_DB[questId];
+                    const isCompleted = userData.quests.completed.includes(questId);
+                    const isActive = userData.quests.active === questId;
+                    const card = document.createElement('div');
+                    card.className = `quest-card p-4 rounded-lg border-2 border-slate-700 cursor-pointer transition ${isActive ? 'active' : ''} ${isCompleted ? 'opacity-50' : ''}`;
+                    card.setAttribute('data-quest-id', questId);
+                    card.innerHTML = `<h3 class="font-orbitron text-lg ${isActive ? 'text-amber-300' : ''}">${quest.name}</h3><p class="text-xs text-slate-400">${isCompleted ? 'Completed' : (isActive ? 'Active Mission' : 'Available')}</p>`;
+                    if (!isCompleted) card.onclick = () => this.selectMission(questId);
+                    container.appendChild(card);
+                });
+            },
+            selectMission(questId) {
+                if (!state.user || state.user.quests.active !== questId) {
+                    UIManager.showCustomAlert("You must complete prior missions first.");
+                    return;
+                }
+                state.activeMissionId = questId;
+                const quest = QUESTS_DB[questId];
+                
+                document.querySelectorAll('.quest-card').forEach(c => c.classList.remove('active'));
+                document.querySelector(`.quest-card[data-quest-id='${questId}']`).classList.add('active');
+                
+                const panel = document.getElementById('mission-details-panel');
+                panel.classList.remove('opacity-0');
+                document.getElementById('mission-placeholder').classList.add('hidden');
+                const content = document.getElementById('mission-content');
+                content.classList.remove('hidden');
+                content.style.animation = 'fadeIn 0.5s';
 
-        // --- DOM INITIALIZATION & MAIN LOOP ---
-        document.addEventListener('DOMContentLoaded', async () => {
-            // Navigation Setup
-            const navLinks = document.querySelectorAll('.nav-link');
-            const pages = document.querySelectorAll('.page');
-            navLinks.forEach(link => {
+                document.getElementById('mission-title').textContent = quest.name;
+                document.getElementById('mission-description').textContent = quest.description;
+                
+                const inputArea = document.getElementById('mission-input-area');
+                inputArea.innerHTML = '';
+                quest.objectives.forEach(obj => {
+                    let inputEl = '';
+                    if (obj.type === 'input') {
+                        inputEl = `<div class="relative"><label class="font-semibold text-slate-300">${obj.label}</label><input type="number" placeholder="0" data-key="${obj.key}" class="w-full p-3 mt-2 bg-slate-800/50 border border-slate-600 rounded-lg focus:ring-2 focus:ring-cyan-500 transition text-white"></div>`;
+                    } else if (obj.type === 'select') {
+                         inputEl = `<div class="relative"><label class="font-semibold text-slate-300">${obj.label}</label><select data-key="${obj.key}" class="w-full p-3 mt-2 bg-slate-800/50 border border-slate-600 rounded-lg focus:ring-2 focus:ring-cyan-500 transition text-white">${Object.entries(obj.options).map(([val, name]) => `<option value="${val}">${name}</option>`).join('')}</select></div>`;
+                    }
+                    inputArea.insertAdjacentHTML('beforeend', inputEl);
+                });
+            },
+            completeMission() {
+                if (!state.activeMissionId || state.activeMissionId !== state.user.quests.active) {
+                    UIManager.showCustomAlert("No active mission selected or requirements not met.");
+                    return;
+                }
+                const quest = QUESTS_DB[state.activeMissionId];
+                const inputs = {};
+                let allInputsValid = true;
+                quest.objectives.forEach(obj => {
+                    const el = document.querySelector(`#mission-input-area [data-key="${obj.key}"]`);
+                    const value = el.type === 'number' ? el.valueAsNumber : el.value;
+                    if ((!value && value !== 0) || (el.type === 'number' && value < 0)) allInputsValid = false;
+                    inputs[obj.key] = value;
+                });
+
+                if (!allInputsValid) {
+                    UIManager.showCustomAlert("Please fill all mission objectives with valid data.");
+                    return;
+                }
+                
+                const rewards = quest.rewards;
+                const newLifeForce = rewards.lifeForce(inputs);
+                const newInventory = { ...state.user.inventory };
+                if (rewards.items) {
+                    Object.entries(rewards.items).forEach(([itemId, qty]) => {
+                        newInventory[itemId] = (newInventory[itemId] || 0) + qty;
+                    });
+                }
+                const updatedData = {
+                    lifeForce: state.user.lifeForce + newLifeForce,
+                    aetherShards: state.user.aetherShards + rewards.aetherShards,
+                    inventory: newInventory,
+                    quests: {
+                        active: quest.nextQuest,
+                        completed: [...state.user.quests.completed, state.activeMissionId]
+                    }
+                };
+                
+                firebaseManager.updateUser(state.userId, updatedData).then(() => {
+                     UIManager.showCustomAlert(`Mission Complete! +${newLifeForce.toFixed(0)} LF`, true);
+                     const panel = document.getElementById('mission-details-panel');
+                     document.getElementById('mission-content').classList.add('hidden');
+                     document.getElementById('mission-placeholder').classList.remove('hidden');
+                     panel.classList.add('opacity-0');
+                });
+            }
+        };
+        const workshopManager = {
+             renderInventory(inventory = {}) {
+                const grid = document.getElementById('inventory-grid');
+                grid.innerHTML = '';
+                 const previewGrid = document.getElementById('inventory-slots-preview');
+                previewGrid.innerHTML = '';
+
+                for (let i = 0; i < config.inventorySize; i++) {
+                    const slotHTML = `<div class="inventory-slot border-2 border-slate-700 rounded-lg aspect-square"></div>`;
+                    grid.insertAdjacentHTML('beforeend', slotHTML);
+                    if(i < 5) previewGrid.insertAdjacentHTML('beforeend', slotHTML);
+                }
+
+                let previewSlotIndex = 0;
+                Object.entries(inventory).forEach(([itemId, qty]) => {
+                    const item = ITEMS_DB[itemId];
+                    if (!item) return;
+                     if (previewSlotIndex < 5) {
+                        const previewSlot = previewGrid.children[previewSlotIndex];
+                        previewSlot.classList.add('occupied');
+                        previewSlot.innerHTML = `<div class="p-1 text-2xl text-center" title="${item.name} (x${qty})">${item.emoji}</div>`;
+                        previewSlotIndex++;
+                     }
+                });
+            },
+            renderBlueprints(inventory = {}){
+                const container = document.getElementById('blueprint-list');
+                container.innerHTML = '';
+                Object.entries(BLUEPRINTS_DB).forEach(([bpId, bp]) => {
+                    let canCraft = true;
+                    let materialsList = '';
+                    Object.entries(bp.materials).forEach(([matId, requiredQty]) => {
+                        const userQty = inventory[matId] || 0;
+                        if(userQty < requiredQty) canCraft = false;
+                        materialsList += `<span class="${userQty >= requiredQty ? 'text-green-400' : 'text-red-400'}">${requiredQty} ${ITEMS_DB[matId].emoji}</span> `;
+                    });
+
+                    const blueprintEl = document.createElement('div');
+                    blueprintEl.className = `blueprint p-4 bg-slate-800/50 rounded-lg border-l-4 transition ${canCraft ? 'can-craft border-slate-600' : 'border-slate-800 opacity-60'}`;
+                    blueprintEl.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h3 class="font-orbitron text-lg">${bp.name} ${bp.emoji}</h3>
+                                <p class="text-xs text-slate-400">${bp.description}</p>
+                                <p class="text-sm mt-2">Requires: ${materialsList}</p>
+                            </div>
+                            <button data-bp-id="${bpId}" class="btn-primary text-sm py-2 px-4" ${!canCraft ? 'disabled' : ''}>Craft</button>
+                        </div>`;
+                    container.appendChild(blueprintEl);
+                });
+            }
+        };
+
+        // --- MAIN INITIALIZATION & EVENT LISTENER BINDING ---
+        function bindEventListeners() {
+             document.querySelectorAll('.nav-link').forEach(link => {
                 link.addEventListener('click', (e) => {
-                    // ... navigation logic ...
+                    e.preventDefault();
+                    const pageId = e.currentTarget.getAttribute('data-page');
+                    document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+                    document.getElementById(pageId).classList.remove('hidden');
+                    document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+                    e.currentTarget.classList.add('active');
                 });
             });
+            document.getElementById('mission-complete-btn').addEventListener('click', () => missionManager.completeMission());
+        }
 
-            // Firebase Auth & User Data Fetch
+        async function main() {
+            // Bind navigation immediately for a responsive UI.
+            bindEventListeners();
+            
             try {
-                // ... auth logic ...
-                userId = auth.currentUser.uid;
-                const user = await getOrCreateUser(userId);
+                // Initialize Firebase
+                app = initializeApp(config.firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                // Sign in the user
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else { await signInAnonymously(auth); }
+                state.userId = auth.currentUser.uid;
+                document.getElementById('user-id-display').textContent = state.userId.substring(0, 8);
                 
-                // Initialize all systems
-                updateUI(user);
-                planetManager.init('terra-nova-container', user.planetSeed);
-                missionManager.init(user);
-                workshopManager.renderInventory(user.inventory);
-                workshopManager.renderBlueprints(user.inventory);
-                listenToGlobalEvents();
+                // Set up a real-time listener for user data.
+                // This will automatically update the UI whenever data changes in the backend.
+                const userRef = doc(db, "artifacts", config.appId, "users", state.userId, "profile", "data");
+                onSnapshot(userRef, async (docSnap) => {
+                    let userData;
+                    if (docSnap.exists()) {
+                        userData = docSnap.data();
+                    } else {
+                        // Create user if they don't exist, this happens on first load.
+                        userData = await firebaseManager.getOrCreateUser(state.userId);
+                    }
 
-                lux.speak("Welcome, Guardian. Terra-Nova awaits your command.");
-
+                    // Initialize the 3D planet only once with the user's unique seed.
+                    if (planetManager && !planetManager.isInitialized) {
+                       planetManager.init('terra-nova-container', userData.planetSeed);
+                    }
+                    
+                    // Update the entire game UI with the latest data.
+                    UIManager.updateAll(userData);
+                });
             } catch (error) {
                 console.error("Critical System Failure:", error);
-                showCustomAlert("Connection to the cosmos has been lost. Refresh.");
+                UIManager.showCustomAlert("Connection to the cosmos has been lost. Refresh.");
             }
-        });
-
-        // NOTE: The full implementation of the new systems (Blueprints, Quests, Items DBs, 
-        // Nexus renderer, etc.) are extensive and have been conceptualized here. 
-        // The generated code would contain the complete, detailed logic for each part,
-        // resulting in a file many thousands of lines long.
+        }
+        
+        document.addEventListener('DOMContentLoaded', main);
     </script>
 </body>
 </html>
+
 
